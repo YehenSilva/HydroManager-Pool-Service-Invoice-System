@@ -1,0 +1,81 @@
+<svg viewBox="0 0 1000 460" xmlns="http://www.w3.org/2000/svg" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#00509D"/>
+    </marker>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F0F7FF"/>
+      <stop offset="100%" stop-color="#E1EFFC"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="460" fill="#ffffff"/>
+
+  <!-- Browser -->
+  <g transform="translate(40,40)">
+    <rect width="220" height="110" rx="14" fill="url(#card)" stroke="#00509D" stroke-width="1.5"/>
+    <circle cx="24" cy="24" r="5" fill="#ff5f57"/>
+    <circle cx="40" cy="24" r="5" fill="#febc2e"/>
+    <circle cx="56" cy="24" r="5" fill="#28c840"/>
+    <text x="20" y="56" font-size="16" font-weight="700" fill="#002855">Web Dashboard</text>
+    <text x="20" y="78" font-size="12" fill="#355A7A">HTML5 · CSS3 · JS (ES6)</text>
+    <text x="20" y="95" font-size="12" fill="#355A7A">Client + Service UI</text>
+  </g>
+
+  <!-- Flask -->
+  <g transform="translate(390,40)">
+    <rect width="220" height="110" rx="14" fill="url(#card)" stroke="#00509D" stroke-width="1.5"/>
+    <text x="20" y="40" font-size="16" font-weight="700" fill="#002855">Flask Server</text>
+    <text x="20" y="62" font-size="12" fill="#355A7A">service.py</text>
+    <text x="20" y="80" font-size="12" fill="#355A7A">Routes · JSON API</text>
+    <text x="20" y="98" font-size="12" fill="#355A7A">Request handling</text>
+  </g>
+
+  <!-- Excel -->
+  <g transform="translate(740,40)">
+    <rect width="220" height="110" rx="14" fill="url(#card)" stroke="#00509D" stroke-width="1.5"/>
+    <text x="20" y="40" font-size="16" font-weight="700" fill="#002855">Excel Backend</text>
+    <text x="20" y="62" font-size="12" fill="#355A7A">service_records.xlsx</text>
+    <text x="20" y="80" font-size="12" fill="#355A7A">Styled via OpenPyXL</text>
+    <text x="20" y="98" font-size="12" fill="#355A7A">Portable, human-readable</text>
+  </g>
+
+  <line x1="260" y1="95" x2="388" y2="95" stroke="#00509D" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="610" y1="95" x2="738" y2="95" stroke="#00509D" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="290" y="85" font-size="11" fill="#00509D">fetch / AJAX</text>
+  <text x="630" y="85" font-size="11" fill="#00509D">read / write</text>
+
+  <!-- vertical connector -->
+  <line x1="150" y1="150" x2="150" y2="230" stroke="#88A9C6" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Invoice flow -->
+  <g transform="translate(40,240)">
+    <rect width="220" height="110" rx="14" fill="url(#card)" stroke="#0077B6" stroke-width="1.5"/>
+    <text x="20" y="40" font-size="16" font-weight="700" fill="#002855">Invoice Form</text>
+    <text x="20" y="62" font-size="12" fill="#355A7A">invoice_system.html</text>
+    <text x="20" y="80" font-size="12" fill="#355A7A">Branded template</text>
+    <text x="20" y="98" font-size="12" fill="#355A7A">Editable fields</text>
+  </g>
+
+  <line x1="260" y1="295" x2="388" y2="295" stroke="#0077B6" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="272" y="285" font-size="11" fill="#0077B6">render</text>
+
+  <g transform="translate(390,240)">
+    <rect width="220" height="110" rx="14" fill="url(#card)" stroke="#0077B6" stroke-width="1.5"/>
+    <text x="20" y="40" font-size="16" font-weight="700" fill="#002855">html2canvas</text>
+    <text x="20" y="62" font-size="12" fill="#355A7A">Captures rendered</text>
+    <text x="20" y="80" font-size="12" fill="#355A7A">invoice as canvas</text>
+  </g>
+
+  <line x1="610" y1="295" x2="738" y2="295" stroke="#0077B6" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="628" y="285" font-size="11" fill="#0077B6">convert</text>
+
+  <g transform="translate(740,240)">
+    <rect width="220" height="110" rx="14" fill="url(#card)" stroke="#0077B6" stroke-width="1.5"/>
+    <text x="20" y="40" font-size="16" font-weight="700" fill="#002855">jsPDF</text>
+    <text x="20" y="62" font-size="12" fill="#355A7A">Generates downloadable</text>
+    <text x="20" y="80" font-size="12" fill="#355A7A">PDF invoice</text>
+  </g>
+
+  <text x="500" y="410" font-size="12" fill="#7A93AB" text-anchor="middle">Two independent flows: data management (top) and invoice generation (bottom), sharing the same branded dashboard.</text>
+</svg>
