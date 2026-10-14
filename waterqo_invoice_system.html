@@ -467,8 +467,8 @@
       color: #fff;
     }
 
-    .history-delnote-btn {
-      background: #8e44ad;
+    .history-delnote-btn,
+    .history-convertinv-btn {
       color: #fff;
       border: none;
       border-radius: 4px;
@@ -478,10 +478,36 @@
       cursor: pointer;
     }
 
+    .history-delnote-btn {
+      background: #8e44ad;
+    }
+
+    .history-convertinv-btn {
+      background: #0284c7;
+    }
+
     .btn-import,
     .btn-convert-del {
       background: #8e44ad !important;
       color: #fff !important;
+    }
+
+    .btn-convert-inv {
+      background: #0284c7 !important;
+      color: #fff !important;
+    }
+
+    .btn-import-quot {
+      background: #059669 !important;
+      color: #fff !important;
+    }
+
+    .btn-convert-inv:hover {
+      background: #0369a1 !important;
+    }
+
+    .btn-import-quot:hover {
+      background: #047857 !important;
     }
 
     .btn-save-history {
@@ -497,6 +523,7 @@
     .history-load-btn:hover,
     .history-duplicate-btn:hover,
     .history-delnote-btn:hover,
+    .history-convertinv-btn:hover,
     .history-pdf-btn:hover,
     .history-del-btn:hover {
       opacity: .85;
@@ -4210,6 +4237,8 @@
       <button class="btn-save-history" onclick="invSaveToHistory()"
         title="Save this invoice to History without generating a PDF">Save to History</button>
    
+      <button class="btn-import-quot" onclick="openInvImportQuotModal()"
+        title="Import a quotation directly into this invoice (transfers all items, rates, and client details)">Import Quotation</button>
       <button class="btn-convert-del" onclick="importActiveDocToDelivery('inv')"
         title="Create Delivery Note from this Invoice without prices">To Delivery Note</button>
       <button type="button" class="btn-pricing-history" onclick="openInvoiceSummaryModal()"
@@ -4429,6 +4458,8 @@
       <button class="btn-save-history" onclick="quotSaveToHistory()"
         title="Save this quotation to History without generating a PDF">Save to History</button>
 
+      <button class="btn-convert-inv" onclick="convertActiveQuotationToInvoice()"
+        title="Convert confirmed quotation to Invoice &amp; add/link Client Account">To Invoice</button>
       <button class="btn-convert-del" onclick="importActiveDocToDelivery('quot')"
         title="Create Delivery Note from this Quotation without prices">To Delivery Note</button>
       <button type="button" class="btn-pricing-history" onclick="showClientPricingHistory('quot')"
@@ -5258,6 +5289,55 @@
           <input type="text" id="handing-import-search-no" class="import-search-input"
             placeholder="Enter Invoice, Quotation, or Delivery Note No. (e.g. 101, 001)...">
           <button class="btn-import-search" onclick="searchAndImportDocToHanding(this)">Search &amp; Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVOICE IMPORT QUOTATION MODAL -->
+  <div class="import-modal-overlay" id="inv-import-modal" onclick="if(event.target===this) closeInvImportModal()">
+    <div class="import-modal">
+      <div class="import-modal-header" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+        <h3>📄 Convert Quotation to Invoice</h3>
+        <button class="import-modal-close" onclick="closeInvImportModal()" title="Close">✕</button>
+      </div>
+      <div class="import-modal-body">
+        <div class="import-info-box" style="background:#ecfdf5; border-color:#a7f3d0; color:#065f46;">
+          <strong>Confirm &amp; Convert:</strong> Imports items, rates, quantities, and client details from a quotation directly into an official invoice. You can review and edit before saving, or immediately confirm &amp; save to create/link the client account.
+        </div>
+
+        <!-- Quick Import Current Open Quotation -->
+        <div class="import-quick-section" id="inv-import-quick-section">
+          <div class="import-quick-card" id="inv-import-active-quot-card" style="display:none; border-left:4px solid #059669;">
+            <div style="flex:1;">
+              <div class="import-quick-title" style="color:#059669;">Current Open Quotation</div>
+              <div class="import-quick-details" id="inv-import-active-quot-info"></div>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="btn-import-act" style="background:#0284c7;" onclick="convertActiveQuotationToInvoice(false)" title="Open in invoice form to review and edit">Review in Invoice</button>
+              <button class="btn-import-act" style="background:#059669;" onclick="convertActiveQuotationToInvoice(true)" title="Convert, save invoice, and add/link client account immediately">Confirm &amp; Save (Add Account)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Document by Number -->
+        <div style="font-weight:700; font-size:13px; color:#065f46; margin-top:4px;">Search Quotation by Number</div>
+        <div class="import-search-bar">
+          <input type="text" id="inv-quot-search-input"
+            placeholder="Enter Quotation No (e.g. 042, Q-042)..."
+            onkeydown="if(event.key==='Enter') searchAndImportQuotToInvoice(document.getElementById('btn-search-import-quot'))">
+          <button class="btn-add" id="btn-search-import-quot" onclick="searchAndImportQuotToInvoice(this)"
+            style="padding:6px 14px; font-size:12.5px; background:#059669;">Search &amp; Convert</button>
+        </div>
+
+        <!-- Recent Quotations Browser -->
+        <div style="font-weight:700; font-size:13px; color:#065f46; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+          <span>Recent Quotations</span>
+          <input type="text" id="inv-quot-filter-input" placeholder="Filter quotations..." oninput="filterQuotImportList()"
+            style="font-size:12px; padding:4px 8px; border:1px solid #a7f3d0; border-radius:4px; width:180px;">
+        </div>
+        <div class="import-list-container" id="inv-quot-import-list" style="margin-top:8px;">
+          <!-- Populated dynamically -->
         </div>
       </div>
     </div>
@@ -8896,6 +8976,7 @@
         <button class="history-duplicate-btn" onclick="duplicateFromHistory('${prefix}','${entry.id}')">Duplicate</button>
         <button class="history-editno-btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; border-radius:4px; padding:2px 7px; font-size:11px; cursor:pointer; font-weight:600;" onclick="promptEditInvoiceNo('${prefix}','${entry.id}')" title="Rename ${prefix === 'inv' ? 'invoice' : 'document'} number">Rename</button>
         ${prefix !== 'del' ? `<button class="history-delnote-btn" onclick="importHistoryEntryToDelivery('${prefix}','${entry.id}')" title="Create Delivery Note from this document without prices">Del Note</button>` : ''}
+        ${prefix === 'quot' ? `<button class="history-convertinv-btn" onclick="importHistoryEntryToInvoice('${entry.id}')" title="Convert confirmed quotation to Invoice &amp; add Client Account">To Invoice</button>` : ''}
         ${entry.pdfUrl ? `<button class="history-pdf-btn" onclick="window.open('${entry.pdfUrl}', '_blank')">PDF</button>` : ''}
         <button class="history-del-btn" onclick="deleteFromHistory('${prefix}','${entry.id}')">Delete</button>
       </td>
@@ -10649,6 +10730,361 @@
         btn.textContent = origText;
         btn.disabled = false;
       }
+    }
+
+    // ===================== CONVERT QUOTATION TO INVOICE =====================
+    let quotImportModalCache = [];
+
+    async function convertActiveQuotationToInvoice(saveImmediately = false) {
+      const rows = quotRows;
+      const clientName = document.getElementById('quot-clientName').value.trim();
+      const deliveryAddr = document.getElementById('quot-deliveryAddr').value;
+      const docNo = document.getElementById('quot-invNo').value.trim();
+      const topic = document.getElementById('quot-topic').value;
+      const showTopic = document.getElementById('quot-showTopic').checked;
+      const hideQty = document.getElementById('quot-hideQty').checked;
+      const sigSelect = document.getElementById('quot-sigSelect').value;
+      const advanced = document.getElementById('quot-advancedInput').value;
+      const discount = document.getElementById('quot-discountInput').value;
+      const hideDiscount = document.getElementById('quot-hideDiscount').checked;
+      const clauseToggle = document.getElementById('quot-clause-toggle');
+      const clauseEnabled = clauseToggle ? clauseToggle.checked : false;
+      const clauseText = document.getElementById('quot-clause-text')?.value || '';
+
+      if (!clientName && (!rows || rows.length === 0 || !rows.some(r => r.desc))) {
+        alert('The current Quotation is empty. Please enter items or client details before converting to Invoice.');
+        return;
+      }
+
+      const activeDoc = {
+        no: docNo,
+        clientName: clientName,
+        deliveryAddr: deliveryAddr,
+        topic: topic,
+        showTopic: showTopic,
+        hideQty: hideQty,
+        sigSelect: sigSelect,
+        advanced: advanced,
+        discount: discount,
+        hideDiscount: hideDiscount,
+        clauseEnabled: clauseEnabled,
+        clauseText: clauseText,
+        rows: JSON.parse(JSON.stringify(rows))
+      };
+
+      await importDocToInvoice(activeDoc, `Quotation #${docNo || 'Active'}`, saveImmediately);
+    }
+
+    async function importHistoryEntryToInvoice(id, saveImmediately = false) {
+      let entry = null;
+      const list = await loadHistoryList('quot');
+      entry = (list || []).find(e => String(e.id) === String(id));
+      if (!entry) {
+        entry = await findHistoryEntryById('quot', id);
+      }
+      if (!entry) {
+        alert('Quotation not found in history.');
+        return;
+      }
+      await importDocToInvoice(entry, `Quotation #${entry.no || ''}`, saveImmediately);
+    }
+
+    async function executeConfirmedInvoiceSave(quotNo, newInvNo) {
+      const toast = document.getElementById('inv-toast');
+      const originalToastText = toast ? toast.textContent : '';
+      if (toast) {
+        toast.textContent = `Saving Invoice #${newInvNo} & creating Client Account…`;
+        toast.classList.add('show');
+      }
+      try {
+        await invSaveToHistory();
+        if (toast) {
+          toast.textContent = `Invoice #${newInvNo} saved! Client Account added & linked.`;
+          toast.classList.add('show');
+          setTimeout(() => {
+            toast.classList.remove('show');
+            toast.textContent = originalToastText;
+          }, 4000);
+        }
+      } catch (err) {
+        console.error('Error saving converted invoice:', err);
+        alert('Invoice data was loaded, but auto-save failed: ' + err.message + '\nPlease click "Save to History" manually.');
+      }
+    }
+
+    async function importDocToInvoice(sourceDoc, docTypeName = 'Quotation', saveImmediately = false) {
+      if (!sourceDoc) {
+        alert('No quotation data to import.');
+        return;
+      }
+
+      // Check if invoice already has data
+      const hasExistingData = (invRows && invRows.length > 0 && invRows.some(r => r.desc)) ||
+        (document.getElementById('inv-clientName') && document.getElementById('inv-clientName').value.trim() !== '');
+      if (hasExistingData) {
+        if (!confirm(`Importing from ${docTypeName} (${sourceDoc.no || 'Untitled'}) will replace current Invoice items and client details. Proceed?`)) {
+          return;
+        }
+      }
+
+      // Extract rows - PRESERVE rates and amounts!
+      const rawRows = sourceDoc.rows || [];
+      const importedRows = rawRows.map((r, idx) => ({
+        id: idx + 1,
+        no: (r.no !== undefined && r.no !== null && r.no !== '') ? r.no : (idx + 1),
+        desc: r.desc || '',
+        qty: (r.qty !== undefined && r.qty !== null && r.qty !== '') ? r.qty : 1,
+        rate: (r.rate !== undefined && r.rate !== null && r.rate !== '') ? r.rate : '',
+        amt: (r.amt !== undefined && r.amt !== null && r.amt !== '') ? r.amt : '',
+        noQty: !!r.noQty
+      }));
+
+      // Set Invoice header details
+      document.getElementById('inv-clientName').value = sourceDoc.clientName || '';
+      document.getElementById('inv-deliveryAddr').value = sourceDoc.deliveryAddr || '';
+      document.getElementById('inv-invDate').value = getTodayFormatted();
+
+      // Topic / Quotation Reference
+      let finalTopic = sourceDoc.topic || '';
+      if (!finalTopic && sourceDoc.no) {
+        finalTopic = `Quotation Ref: #${sourceDoc.no}`;
+      }
+      document.getElementById('inv-topic').value = finalTopic;
+      document.getElementById('inv-showTopic').checked = !!sourceDoc.showTopic || (!sourceDoc.topic && !!sourceDoc.no);
+      toggleTopic('inv');
+
+      // Set Qty column visibility if source hid it
+      document.getElementById('inv-hideQty').checked = !!sourceDoc.hideQty;
+      toggleQtyColumn('inv');
+
+      // Signature
+      if (sourceDoc.sigSelect) {
+        document.getElementById('inv-sigSelect').value = sourceDoc.sigSelect;
+      }
+      updateSignature('inv');
+
+      // Advance & Discount
+      document.getElementById('inv-advancedInput').value = sourceDoc.advanced ? fmt(parseFloat(String(sourceDoc.advanced).replace(/,/g, ''))) : fmt(0);
+      document.getElementById('inv-discountInput').value = sourceDoc.discount ? fmt(parseFloat(String(sourceDoc.discount).replace(/,/g, ''))) : fmt(0);
+      document.getElementById('inv-hideDiscount').checked = !!sourceDoc.hideDiscount;
+      toggleDiscountRow('inv');
+
+      // Ensure Link to Client Account is checked
+      const linkAccountEl = document.getElementById('inv-linkAccount');
+      if (linkAccountEl) linkAccountEl.checked = true;
+
+      // Special Clause
+      const clauseToggle = document.getElementById('inv-clause-toggle');
+      if (clauseToggle) {
+        clauseToggle.checked = !!sourceDoc.clauseEnabled;
+        toggleClause('inv');
+        if (sourceDoc.clauseEnabled && sourceDoc.clauseText) {
+          document.getElementById('inv-clause-text').value = sourceDoc.clauseText;
+          updateClausePreview('inv');
+        }
+      }
+
+      // Assign new Invoice rows and reset active doc IDs
+      invRows = importedRows.length > 0 ? importedRows : [{ id: 1, no: '', desc: '', qty: 1, rate: '', amt: '', noQty: false }];
+      invNid = invRows.length + 1;
+      activeDocIds['inv'] = null;
+      savedDocIds['inv'] = null;
+      originalDocNumbers['inv'] = null;
+
+      let nextInvNo = '';
+      try {
+        nextInvNo = await getNextInvNo();
+        document.getElementById('inv-invNo').value = nextInvNo;
+        checkDocNoConflict('inv');
+      } catch (e) {
+        console.error('Failed to get next invoice number:', e);
+      }
+
+      // Render table, calc, switch tab, auto-save
+      invRenderTable();
+      calcAll('inv');
+      switchTab('invoice');
+      closeInvImportModal();
+      autoSaveCurrentDocument('inv');
+      trackUserPresence();
+
+      if (saveImmediately) {
+        await executeConfirmedInvoiceSave(sourceDoc.no || '', nextInvNo);
+      } else {
+        const quotLabel = sourceDoc.no ? `Quotation #${sourceDoc.no}` : 'Quotation';
+        const wantSaveNow = confirm(
+          `${quotLabel} has been converted into Invoice #${nextInvNo}!\n\n` +
+          `Do you want to SAVE this invoice and create/link the Client Account right now?\n\n` +
+          `• Click OK to Save immediately (adds client account & ledger).\n` +
+          `• Click Cancel to review and edit the invoice first.`
+        );
+        if (wantSaveNow) {
+          await executeConfirmedInvoiceSave(sourceDoc.no || '', nextInvNo);
+        } else {
+          const toast = document.getElementById('inv-toast');
+          if (toast) {
+            const origText = toast.textContent;
+            toast.textContent = `Converted from ${quotLabel} to Invoice #${nextInvNo}! Review and click 'Save to History' when ready.`;
+            toast.classList.add('show');
+            setTimeout(() => {
+              toast.classList.remove('show');
+              toast.textContent = origText;
+            }, 3500);
+          }
+        }
+      }
+    }
+
+    async function searchAndImportQuotToInvoice(btn, saveImmediately = false) {
+      const input = document.getElementById('inv-quot-search-input');
+      const docNo = input.value.trim();
+      if (!docNo) {
+        alert('Please enter a Quotation number to search.');
+        return;
+      }
+
+      const origText = btn.textContent;
+      btn.textContent = 'Searching...';
+      btn.disabled = true;
+
+      try {
+        const { data, error } = await sb
+          .from('invoice_history')
+          .select('id, entry')
+          .eq('doc_type', 'quot')
+          .eq('entry->>no', docNo)
+          .order('saved_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          alert(`No Quotation found with Number "${docNo}".`);
+          return;
+        }
+
+        const match = { ...data[0].entry, id: data[0].id };
+        await importDocToInvoice(match, `Quotation #${match.no || docNo}`, saveImmediately);
+      } catch (e) {
+        console.error('Quotation import search failed:', e);
+        alert('Search failed: ' + e.message);
+      } finally {
+        btn.textContent = origText;
+        btn.disabled = false;
+      }
+    }
+
+    async function openInvImportQuotModal() {
+      const modal = document.getElementById('inv-import-modal');
+      if (!modal) return;
+      modal.classList.add('show');
+
+      // Quick-card for current open quotation
+      const activeQuotRows = quotRows.filter(r => r.desc);
+      const activeQuotClient = document.getElementById('quot-clientName').value.trim();
+      const activeQuotNo = document.getElementById('quot-invNo').value.trim();
+      const activeQuotCard = document.getElementById('inv-import-active-quot-card');
+      if (activeQuotCard) {
+        if (activeQuotRows.length > 0 || activeQuotClient) {
+          activeQuotCard.style.display = 'flex';
+          const quotTotal = calcRowsTotal(quotRows);
+          document.getElementById('inv-import-active-quot-info').textContent =
+            `Quotation #${activeQuotNo || '—'} • ${activeQuotClient || 'No Client'} • ${activeQuotRows.length} item(s) • Total: Rs. ${fmt(quotTotal)}`;
+        } else {
+          activeQuotCard.style.display = 'none';
+        }
+      }
+
+      document.getElementById('inv-quot-search-input').value = '';
+      document.getElementById('inv-quot-filter-input').value = '';
+      await loadRecentQuotationsForImport();
+    }
+
+    function closeInvImportModal() {
+      const modal = document.getElementById('inv-import-modal');
+      if (modal) modal.classList.remove('show');
+    }
+
+    async function loadRecentQuotationsForImport() {
+      const listEl = document.getElementById('inv-quot-import-list');
+      if (!listEl) return;
+      listEl.innerHTML = '<div style="padding:20px; text-align:center; color:#777;">Loading recent quotations...</div>';
+
+      try {
+        const quotList = await loadHistoryList('quot');
+        quotImportModalCache = (quotList || []).sort((a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0));
+        renderQuotImportDocList();
+      } catch (e) {
+        console.error('loadRecentQuotationsForImport threw:', e);
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:#c0392b;">Failed to load quotations.</div>';
+      }
+    }
+
+    function filterQuotImportList() {
+      renderQuotImportDocList();
+    }
+
+    function renderQuotImportDocList() {
+      const listEl = document.getElementById('inv-quot-import-list');
+      if (!listEl) return;
+
+      const searchTerm = (document.getElementById('inv-quot-filter-input')?.value || '').trim().toLowerCase();
+      let filtered = quotImportModalCache;
+
+      if (searchTerm) {
+        filtered = filtered.filter(d => {
+          const haystack = `${d.no || ''} ${d.clientName || ''} ${d.invDate || ''} ${(d.rows || []).map(r => r.desc).join(' ')}`.toLowerCase();
+          return haystack.includes(searchTerm);
+        });
+      }
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:#777; font-style:italic;">No matching quotations found.</div>';
+        return;
+      }
+
+      listEl.innerHTML = '';
+      filtered.slice(0, 60).forEach(doc => {
+        const row = document.createElement('div');
+        row.className = 'import-item-row';
+        const itemCount = (doc.rows || []).filter(r => r.desc).length;
+        const itemSnippet = (doc.rows || []).filter(r => r.desc).slice(0, 2).map(r => r.desc).join(', ');
+        const totalFormatted = (doc.hideTotals) ? '—' : ('Rs. ' + fmt(doc.total || 0));
+
+        row.innerHTML = `
+          <div style="flex:1; min-width:0; padding-right:12px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px; flex-wrap:wrap;">
+              <span class="import-doc-badge badge-quot">QUOTATION</span>
+              <strong style="color:#0284c7; font-size:13.5px;">#${esc(doc.no || '—')}</strong>
+              <span style="color:#666; font-size:12px;">• ${esc(doc.invDate || '')}</span>
+              <span style="color:#059669; font-weight:700; font-size:12.5px; margin-left:auto;">${totalFormatted}</span>
+            </div>
+            <div style="font-size:13px; font-weight:600; color:#222; margin-bottom:2px;">
+              ${esc(doc.clientName || 'Unnamed Client')}
+            </div>
+            <div style="font-size:11.5px; color:#777; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(itemSnippet)}">
+              ${itemCount} item(s)${itemSnippet ? ': ' + esc(itemSnippet) : ''}
+            </div>
+          </div>
+          <div style="display:flex; gap:6px; flex-shrink:0;">
+            <button class="btn-import-row" style="background:#0284c7;" onclick="importQuotFromModalRow('${doc.id}', false)" title="Review and edit in invoice form">
+              Review
+            </button>
+            <button class="btn-import-row" style="background:#059669;" onclick="importQuotFromModalRow('${doc.id}', true)" title="Convert, save invoice, and add/link client account immediately">
+              Save &amp; Add Acct
+            </button>
+          </div>
+        `;
+        listEl.appendChild(row);
+      });
+    }
+
+    async function importQuotFromModalRow(id, saveImmediately = false) {
+      const doc = quotImportModalCache.find(d => String(d.id) === String(id));
+      if (!doc) {
+        alert('Quotation not found in list.');
+        return;
+      }
+      await importDocToInvoice(doc, `Quotation #${doc.no || ''}`, saveImmediately);
     }
 
     let importModalCache = [];
