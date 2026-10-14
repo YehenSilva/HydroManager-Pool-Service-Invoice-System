@@ -4,16 +4,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- Content Security Policy: Blocks unauthorized script origins and external data exfiltration -->
+  <!-- Content Security Policy: SECURITY HARDENED - removed unsafe-inline/unsafe-eval -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self' data: blob:;
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
+    script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com data:;
     img-src 'self' data: blob: https:;
-    connect-src 'self' https://koavtkpwqzimkebvtgga.supabase.co wss://koavtkpwqzimkebvtgga.supabase.co https://poolservice-cef5b.web.app;
+    connect-src 'self' https://koavtkpwqzimkebvtgga.supabase.co wss://koavtkpwqzimkebvtgga.supabase.co;
     frame-src 'self' blob:;
     object-src 'none';
+    base-uri 'self';
+    form-action 'self';
   ">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -6386,10 +6388,18 @@
     </div>
   </div>
 
+  <!-- Load configuration from external file -->
+  <script src="config.js"></script>
   <script>
     // ===================== SUPABASE (shared cross-device storage) =====================
-    const SUPABASE_URL = 'https://koavtkpwqzimkebvtgga.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvYXZ0a3B3cXppbWtlYnZ0Z2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NTgxNDcsImV4cCI6MjEwMTMzNDE0N30.mEh5M6oUeVtlRUU56rSKkWmD2lVXu0HAovzZkygj3ZI';
+    // Credentials now loaded from config.js (not committed to repo)
+    if (typeof CONFIG === 'undefined') {
+      console.error('⚠️ CRITICAL: config.js not found. Please copy config.template.js to config.js and configure your credentials.');
+      alert('Configuration file missing. Please contact your administrator.');
+      throw new Error('Missing configuration file');
+    }
+    const SUPABASE_URL = CONFIG.SUPABASE_URL;
+    const SUPABASE_KEY = CONFIG.SUPABASE_ANON_KEY;
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // ===================== INPUT SANITIZATION UTILITY =====================
@@ -6398,6 +6408,53 @@
         return DOMPurify.sanitize(dirty);
       }
       return dirty;
+    }
+
+    // ===================== SESSION MANAGEMENT & SECURITY =====================
+    let sessionTimeout;
+    let csrfToken = generateCSRFToken();
+    sessionStorage.setItem('csrf_token', csrfToken);
+
+    function generateCSRFToken() {
+      const array = new Uint8Array(CONFIG?.CSRF_TOKEN_LENGTH || 32);
+      crypto.getRandomValues(array);
+      return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function validateCSRFToken(token) {
+      return token === sessionStorage.getItem('csrf_token');
+    }
+
+    function resetSessionTimeout() {
+      if (!CONFIG?.ENABLE_AUTO_LOGOUT) return;
+      clearTimeout(sessionTimeout);
+      sessionTimeout = setTimeout(() => {
+        handleLogout(true);
+        alert('Session expired due to inactivity. Please log in again for security.');
+      }, CONFIG?.SESSION_TIMEOUT_MS || 1800000); // Default 30 minutes
+    }
+
+    // Reset session timeout on user activity
+    if (CONFIG?.ENABLE_AUTO_LOGOUT) {
+      document.addEventListener('click', resetSessionTimeout);
+      document.addEventListener('keypress', resetSessionTimeout);
+      document.addEventListener('mousemove', resetSessionTimeout);
+    }
+
+    // ===================== INPUT VALIDATION =====================
+    function validateFinancialInput(value, fieldName) {
+      const num = parseFloat(value);
+      if (isNaN(num)) {
+        console.warn(`Invalid ${fieldName}: not a number`);
+        return false;
+      }
+      const MAX_AMOUNT = CONFIG?.MAX_INVOICE_AMOUNT || 10000000;
+      const MIN_AMOUNT = CONFIG?.MIN_INVOICE_AMOUNT || -1000000;
+      if (num > MAX_AMOUNT || num < MIN_AMOUNT) {
+        alert(`${fieldName} must be between ${MIN_AMOUNT} and ${MAX_AMOUNT}`);
+        return false;
+      }
+      return true;
     }
 
     // ===================== CRYPTOGRAPHIC & SECURITY UTILITIES =====================
@@ -6422,7 +6479,7 @@
         'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
       );
       const key = await window.crypto.subtle.deriveKey(
-        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        { name: 'PBKDF2', salt, iterations: CONFIG?.BACKUP_PBKDF2_ITERATIONS || 600000, hash: 'SHA-256' },
         keyMaterial,
         { name: 'AES-GCM', length: 256 },
         false,
@@ -6453,7 +6510,7 @@
         'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
       );
       const key = await window.crypto.subtle.deriveKey(
-        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        { name: 'PBKDF2', salt, iterations: CONFIG?.BACKUP_PBKDF2_ITERATIONS || 600000, hash: 'SHA-256' },
         keyMaterial,
         { name: 'AES-GCM', length: 256 },
         false,
@@ -7072,7 +7129,19 @@
 
     // ===================== SHARED UTILITIES =====================
     const MAX = 20;
-    function esc(v) { return (v || '').toString().replace(/"/g, '&quot;'); }
+
+    // SECURITY FIX: Enhanced HTML escaping to prevent XSS attacks
+    function esc(v) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        '/': '&#x2F;'
+      };
+      return (v || '').toString().replace(/[&<>"'/]/g, m => map[m]);
+    }
     function fmt(n) { return n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function calcAmt(qty, rate) {
       const q = parseFloat(qty);
@@ -11991,6 +12060,7 @@ Thank you for choosing Waterqo Swimming Pools.`;
     let failedLoginAttempts = 0;
     let loginLockoutRemaining = 0;
     let loginLockoutTimer = null;
+    let lockoutLevel = 0; // Progressive lockout: 0 = 5min, 1 = 15min, 2 = 60min
 
     function startLoginLockout(seconds) {
       loginLockoutRemaining = seconds;
@@ -12005,15 +12075,18 @@ Thank you for choosing Waterqo Swimming Pools.`;
         if (loginLockoutRemaining <= 0) {
           clearInterval(loginLockoutTimer);
           loginLockoutTimer = null;
-          failedLoginAttempts = 0;
           submitBtn.disabled = false;
           submitBtn.textContent = 'Sign In';
           errorDiv.style.display = 'none';
         } else {
-          errorDiv.textContent = `Security Lockout: Too many failed sign-in attempts. Try again in ${loginLockoutRemaining}s.`;
+          const mins = Math.floor(loginLockoutRemaining / 60);
+          const secs = loginLockoutRemaining % 60;
+          errorDiv.textContent = `Security Lockout: Too many failed attempts. Try again in ${mins}:${secs.toString().padStart(2, '0')}.`;
         }
       }, 1000);
-      errorDiv.textContent = `Security Lockout: Too many failed sign-in attempts. Try again in ${loginLockoutRemaining}s.`;
+      const mins = Math.floor(loginLockoutRemaining / 60);
+      const secs = loginLockoutRemaining % 60;
+      errorDiv.textContent = `Security Lockout: Too many failed attempts. Try again in ${mins}:${secs.toString().padStart(2, '0')}.`;
     }
 
     document.getElementById('login-form').addEventListener('submit', async function (e) {
@@ -12036,19 +12109,28 @@ Thank you for choosing Waterqo Swimming Pools.`;
 
       if (error) {
         failedLoginAttempts++;
-        if (failedLoginAttempts >= 5) {
-          startLoginLockout(120);
+        const maxAttempts = CONFIG?.MAX_LOGIN_ATTEMPTS || 5;
+        if (failedLoginAttempts >= maxAttempts) {
+          // SECURITY FIX: Progressive lockout durations (5min → 15min → 60min)
+          const durations = CONFIG?.LOCKOUT_DURATIONS || [300000, 900000, 3600000];
+          const durationMs = durations[Math.min(lockoutLevel, durations.length - 1)];
+          lockoutLevel = Math.min(lockoutLevel + 1, durations.length - 1);
+          failedLoginAttempts = 0;
+          startLoginLockout(Math.floor(durationMs / 1000));
         } else {
-          const remaining = 5 - failedLoginAttempts;
-          errorDiv.textContent = error.message + ` (${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout)`;
+          const remaining = maxAttempts - failedLoginAttempts;
+          errorDiv.textContent = 'Invalid email or password. ' + `(${remaining} attempt${remaining === 1 ? '' : 's'} remaining before lockout)`;
           errorDiv.style.display = 'block';
           submitBtn.disabled = false;
           submitBtn.textContent = 'Sign In';
         }
       } else {
         failedLoginAttempts = 0;
+        lockoutLevel = 0;
         submitBtn.disabled = false;
         submitBtn.textContent = 'Sign In';
+        // SECURITY: Start session timeout on successful login
+        resetSessionTimeout();
       }
     });
 
@@ -12056,18 +12138,23 @@ Thank you for choosing Waterqo Swimming Pools.`;
       if (!isForced) {
         if (!confirm('Are you sure you want to sign out?')) return;
       }
+      // SECURITY: Clear session timeout on logout
+      clearTimeout(sessionTimeout);
       currentUserEmail = '';
       if (presenceChannel) {
         try { await presenceChannel.unsubscribe(); } catch (e) {}
         presenceChannel = null;
       }
-      // SECURITY: Clear sensitive financial and draft caches on sign-out to protect shared devices
+      // SECURITY: Clear ALL sensitive financial and draft caches on sign-out to protect shared devices
       try {
-        localStorage.removeItem('waterqo_invoice_history');
-        localStorage.removeItem('waterqo_inv_draft');
-        localStorage.removeItem('waterqo_quot_draft');
-        localStorage.removeItem('waterqo_del_draft');
-        localStorage.removeItem('waterqo_handing_draft');
+        const keysToRemove = [
+          'waterqo_invoice_history', 'waterqo_inv_draft', 'waterqo_quot_draft',
+          'waterqo_del_draft', 'waterqo_handing_draft', 'waterqo_client_accounts',
+          'waterqo_client_payments', 'waterqo_invoice_status', 'waterqo_manual_ledger_entries',
+          'waterqo_statement_notes', 'waterqo_deleted_clients'
+        ];
+        keysToRemove.forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+        sessionStorage.clear();
       } catch (e) {}
       try {
         await sb.auth.signOut();
