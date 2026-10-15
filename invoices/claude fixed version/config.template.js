@@ -8,7 +8,7 @@ const CONFIG = {
   // ====== SUPABASE CONFIGURATION ======
   // Get these from: https://supabase.com/dashboard/project/<your-project>/settings/api
   SUPABASE_URL: 'https://koavtkpwqzimkebvtgga.supabase.co', // Your Supabase project URL
-  SUPABASE_ANON_KEY: 'YOUR_NEW_ROTATED_KEY_HERE', // ⚠️ ROTATE THE OLD EXPOSED KEY FIRST!
+  SUPABASE_ANON_KEY: 'sb_publishable_RmVnq8G63bXG379Bpj6UrA_45hkSJT8', // ⚠️ ROTATE THE OLD EXPOSED KEY FIRST!
 
   // ====== SESSION MANAGEMENT ======
   SESSION_TIMEOUT_MS: 30 * 60 * 1000, // 30 minutes of inactivity
